@@ -127,8 +127,9 @@ DETAIL ITEM
 {detail_items}
 
 Gunakan format:
-## Ringkasan
-## 3 Rekomendasi
+- ...
+- ...
+- ...
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
