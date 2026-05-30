@@ -101,12 +101,13 @@ def build_prompt(req: RekomendasiRequest) -> str:
     return f"""Kamu adalah financial advisor profesional. Gunakan Bahasa Indonesia yang profesional, ringkas, dan actionable.
 
 PENTING:
-- Tanpa salam pembuka
-- Tanpa menyebut nama orang atau pihak manapun
-- Maksimal 50 kata total
-- Hanya 3 rekomendasi singkat
-- Format: bullet points pendek, langsung ke angka dan aksi nyata
-- Tidak perlu kesimpulan atau penutup
+- Tanpa salam, tanpa penutup, tanpa menyebut nama orang
+- Maksimal 60 kata total
+- Tulis 3 kalimat rekomendasi singkat dan actionable
+- Setiap kalimat langsung ke angka dan aksi nyata
+- Bahasa Indonesia, formal tapi ringkas
+
+Tulis langsung 3 rekomendasi tanpa judul atau header apapun.
 
 PROFIL PENGGUNA
 - Gaya hidup: {req.gaya_hidup}
