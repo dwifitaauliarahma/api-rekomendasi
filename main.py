@@ -37,7 +37,7 @@ else:
     model = None  # Akan error saat dipanggil jika tidak ada key
 
 
-# ─── Schema ───────────────────────────────────────────────────────────────────
+# ─── Schema ──────────────────────────────────────────────────────────────────
 class ItemTransaksi(BaseModel):
     nama_produk: str = Field(..., example="indomie goreng")
     kategori: str = Field(..., example="Makanan/Minuman")
@@ -49,7 +49,7 @@ class RiwayatBulan(BaseModel):
     kategori_terbesar: str = Field(..., example="Makanan/Minuman")
 
 class RekomendasiRequest(BaseModel):
-    transaksi: List[ItemTransaksi] = Field(..., min_items=1)
+    transaksi: List[ItemTransaksi] = Field(..., min_length=1)
     riwayat_bulanan: Optional[List[RiwayatBulan]] = None
     target_hemat: Optional[float] = Field(None, example=500000)
     gaya_hidup: Optional[str] = Field("normal", example="hemat / normal / konsumtif")
@@ -131,7 +131,7 @@ Gunakan format:
 ## 3 Rekomendasi Penghematan
 ## Strategi Belanja Berikutnya
 ## Target Bulan Depan
-
+"""
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
