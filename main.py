@@ -13,12 +13,14 @@ from typing import Optional, List
 import google.generativeai as genai
 import os
 
+# ─── Setup ───────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="API Rekomendasi Keuangan",
     description="Sistem rekomendasi pengeluaran berbasis Google Gemini AI",
     version="1.0.0"
 )
 
+# CORS — izinkan semua origin (sesuaikan untuk production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,14 +28,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ambil API key dari environment variable
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel("models/gemini-2.5-flash")
 else:
-    model = None
+    model = None  # Akan error saat dipanggil jika tidak ada key
 
 
+# ─── Schema ───────────────────────────────────────────────────────────────────
 class ItemTransaksi(BaseModel):
     nama_produk: str = Field(..., example="indomie goreng")
     kategori: str = Field(..., example="Makanan/Minuman")
@@ -55,6 +59,7 @@ class ChatRequest(BaseModel):
     konteks_transaksi: Optional[List[ItemTransaksi]] = None
 
 
+# ─── Helper ──────────────────────────────────────────────────────────────────
 def rupiah(angka: float) -> str:
     try:
         return f"Rp {angka:,.0f}".replace(",", ".")
@@ -66,13 +71,14 @@ def build_prompt(req: RekomendasiRequest) -> str:
     transaksi = req.transaksi
     total = sum(t.total_pengeluaran for t in transaksi)
 
+    # Ringkasan kategori
     kat_map: dict[str, float] = {}
     for t in transaksi:
         kat_map[t.kategori] = kat_map.get(t.kategori, 0) + t.total_pengeluaran
     kat_sorted = sorted(kat_map.items(), key=lambda x: -x[1])
 
     detail_items = "\n".join(
-        f"- {t.nama_produk} ({t.kategori}) -> {rupiah(t.total_pengeluaran)}"
+        f"- {t.nama_produk} ({t.kategori}) → {rupiah(t.total_pengeluaran)}"
         for t in transaksi
     )
     ringkasan_kat = "\n".join(
@@ -92,26 +98,39 @@ def build_prompt(req: RekomendasiRequest) -> str:
         else "Belum ada target penghematan khusus"
     )
 
-    return (
-        "Kamu adalah financial advisor profesional. Gunakan Bahasa Indonesia yang sopan, hangat, dan mudah dipahami.\n"
-        "PENTING:\n"
-        "- Tanpa salam pembuka, tanpa penutup\n"
-        "- Tanpa menyebut nama orang atau pihak manapun\n"
-        "- Setiap rekomendasi minimal 2 kalimat yang sopan dan membangun\n"
-        "- Tulis 3 rekomendasi saja, masing-masing langsung ke aksi nyata dan angka\n"
-        "- Gunakan kata-kata yang positif dan tidak menyinggung\n"
-        "- Tulis langsung tanpa judul atau header apapun\n\n"
-        f"Gaya hidup: {req.gaya_hidup}\n"
-        f"{target_str}\n\n"
-        f"{riwayat_str}\n\n"
-        f"Total pengeluaran: {rupiah(total)}\n"
-        f"Jumlah item: {len(transaksi)}\n"
-        f"Kategori terbesar: {kat_sorted[0][0]} ({rupiah(kat_sorted[0][1])})\n\n"
-        f"Kategori:\n{ringkasan_kat}\n\n"
-        f"Detail:\n{detail_items}"
-    )
+    return f"""Kamu adalah financial advisor profesional. Gunakan Bahasa Indonesia yang profesional, ringkas, dan actionable.
 
+PENTING:
+- Tanpa salam pembuka
+- Tanpa menyebut nama orang atau pihak manapun
+- Maksimal 50 kata total
+- Hanya 3 rekomendasi singkat
+- Format: bullet points pendek, langsung ke angka dan aksi nyata
+- Tidak perlu kesimpulan atau penutup
 
+PROFIL PENGGUNA
+- Gaya hidup: {req.gaya_hidup}
+- {target_str}
+
+{riwayat_str}
+
+RINGKASAN TRANSAKSI
+- Total pengeluaran  : {rupiah(total)}
+- Jumlah item        : {len(transaksi)}
+- Rata-rata per item : {rupiah(total / len(transaksi))}
+- Kategori terbesar  : {kat_sorted[0][0]} ({rupiah(kat_sorted[0][1])})
+
+RINGKASAN KATEGORI
+{ringkasan_kat}
+
+DETAIL ITEM
+{detail_items}
+
+Gunakan format:
+## Ringkasan
+## 3 Rekomendasi
+
+# ─── Endpoints ───────────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
     return {
@@ -123,6 +142,9 @@ def health():
 
 @app.post("/rekomendasi")
 def rekomendasi(req: RekomendasiRequest):
+    """
+    Kirim daftar transaksi, dapatkan analisis & rekomendasi keuangan dari Gemini AI.
+    """
     if model is None:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY belum dikonfigurasi di server.")
 
@@ -133,7 +155,7 @@ def rekomendasi(req: RekomendasiRequest):
             prompt,
             generation_config=genai.types.GenerationConfig(
                 temperature=0.6,
-                max_output_tokens=500,
+                max_output_tokens=4000,
                 top_p=0.9,
                 top_k=40,
             ),
@@ -177,6 +199,9 @@ def rekomendasi(req: RekomendasiRequest):
 
 @app.post("/chatbot")
 def chatbot(req: ChatRequest):
+    """
+    Tanya jawab bebas tentang keuangan. Opsional: sertakan konteks transaksi.
+    """
     if model is None:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY belum dikonfigurasi di server.")
 
@@ -187,12 +212,12 @@ def chatbot(req: ChatRequest):
             for t in req.konteks_transaksi
         )
 
-    prompt = (
-        "Kamu adalah financial advisor yang ramah dan profesional.\n"
-        "Jawab dalam Bahasa Indonesia. Ringkas dan actionable.\n\n"
-        f"{konteks_str}\n\n"
-        f"Pertanyaan pengguna: {req.pesan}"
-    )
+    prompt = f"""Kamu adalah financial advisor yang ramah dan profesional.
+Jawab dalam Bahasa Indonesia. Ringkas dan actionable.
+
+{konteks_str}
+
+Pertanyaan pengguna: {req.pesan}"""
 
     try:
         response = model.generate_content(prompt)
