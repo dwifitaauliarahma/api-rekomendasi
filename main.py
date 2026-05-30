@@ -93,13 +93,14 @@ def build_prompt(req: RekomendasiRequest) -> str:
     )
 
     return (
-        "Kamu adalah financial advisor profesional. Gunakan Bahasa Indonesia yang ringkas dan actionable.\n"
+        "Kamu adalah financial advisor profesional. Gunakan Bahasa Indonesia yang sopan, hangat, dan mudah dipahami.\n"
         "PENTING:\n"
-        "- Tanpa salam, tanpa penutup, tanpa menyebut nama orang\n"
-        "- Maksimal 60 kata total\n"
-        "- Tulis 3 rekomendasi singkat langsung ke angka dan aksi nyata\n"
-        "- Bahasa Indonesia, formal tapi ringkas\n"
-        "- Tulis langsung 3 rekomendasi tanpa judul atau header apapun\n\n"
+        "- Tanpa salam pembuka, tanpa penutup\n"
+        "- Tanpa menyebut nama orang atau pihak manapun\n"
+        "- Setiap rekomendasi minimal 2 kalimat yang sopan dan membangun\n"
+        "- Tulis 3 rekomendasi saja, masing-masing langsung ke aksi nyata dan angka\n"
+        "- Gunakan kata-kata yang positif dan tidak menyinggung\n"
+        "- Tulis langsung tanpa judul atau header apapun\n\n"
         f"Gaya hidup: {req.gaya_hidup}\n"
         f"{target_str}\n\n"
         f"{riwayat_str}\n\n"
